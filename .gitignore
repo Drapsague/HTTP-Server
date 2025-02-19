@@ -1,0 +1,9 @@
+# Binary files
+*.o
+
+# Makefile
+Makefile
+
+# Executable files
+HTTP_server
+
