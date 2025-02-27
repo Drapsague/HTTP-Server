@@ -1,7 +1,6 @@
 #include "server.h"
+#include "requestsHandler.h"
 
-#include <asm-generic/socket.h>
-#include <cstddef>
 #include <cstdio>
 #include <iostream>
 #include <sys/socket.h>
@@ -10,7 +9,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <cstring>
-#include <memory>
 
 /* Create a socket
  * Bind the socket to an IP and Port
@@ -24,6 +22,7 @@ void Server::start() {
 
 	// Creates a socket and return the socket file descriptor
 	int socket_edp = socket(AF_INET, SOCK_STREAM, 0); 
+	sockfd = socket_edp;
 
 	if (socket_edp == -1) {
 		std::cerr << "Socket creation failed." << std::endl;
@@ -64,75 +63,20 @@ void Server::start() {
 
 	int clientSocket =  accept(socket_edp, nullptr, nullptr);
 
-	// Creating the buffer for incomming requests
-	size_t buffer_size {4096};
-	std::unique_ptr<char[]> buffer_re {new char[buffer_size]};
+	sockClient = clientSocket;
 
-	// Receiving incomming requests
-	ssize_t rec = recv(clientSocket, buffer_re.get(), buffer_size, 0);
-	if (rec <= 0) {
-		std::cerr << "Client disconnected or an error occured" << std::endl;
-		close(socket_edp);
-		close(clientSocket);
-		return;
-	}
-	std::cout << buffer_re.get() << std::endl;
+	RequestsHandler req = RequestsHandler(this, 4096);
+	req.handleClient();
+	/*req.recvRequest();*/
+	/*req.parseRequest();*/
+	/*req.sendResponse();*/
 
-	// Sending a response to the client
-	// Creating the reponse buffer
-	size_t buffer_size_se {4096};
-	std::unique_ptr<char[]> buffer_se {new char[buffer_size_se]};
+	/*std::cout << "Closing connection" << std::endl;*/
+	/*close(socket_edp);*/
+	/*close(clientSocket);*/
 
-	// Creating payload
-	const char* payload {"Welcome to the Grid"};
-	// Adding 2 because we add \r\n after the payload
-	size_t payload_size {strlen(payload) + 2};
-	/*const int payload_size = 4096;*/
-	/*char payload[payload_size] = "Hello World!";*/
-
-	// Content-Length needs to match the size of the payload
-	int response = snprintf(buffer_se.get(), buffer_size_se, 
-			 "HTTP/1.1 200 OK\r\n"
-			 "Content-Type: text/html\r\n"
-			 "Content-Length: %d\r\n"
-			 "\r\n"
-			 "%s\r\n",
-			 static_cast<int>(payload_size),
-			 payload);
 	
-	if (response >= static_cast<int>(buffer_size_se)) {
-		std::cerr << "Response was truncated" << std::endl;
-	}
-	else if ( response < 0 ) {
-		std::cerr << "Error formating response" << std::endl;
-		close(socket_edp);
-		close(clientSocket);
-		return;
-	}
-
-	// Here we need to send in a loop, send() could send the response partially
-	// We make sure that every bytes is sent
-	size_t rest_bytes = response;
-	std::cout << "Response size is : " << response << std::endl;
-	char* current = buffer_se.get();
-	while (rest_bytes != 0) {
-		size_t X = std::min(rest_bytes, buffer_size_se);
-		ssize_t sendResponse = send(clientSocket, current, X, 0);
-		rest_bytes -= sendResponse;
-		current += sendResponse;
-		if (sendResponse == -1) {
-			std::cerr << "Failed to send a response to the client." << std::endl;
-			close(socket_edp);
-			close(clientSocket);
-			return;
-		}
-	}
-	
-	std::cout << "Closing connection" << std::endl;
-	current = nullptr;
-	close(socket_edp);
-	close(clientSocket);
-		
 }
+
 
 
