@@ -12,13 +12,12 @@
 class RequestsHandler {
 	// This file allow me to setup what RequestsHandler.cpp can use (in term of functions and variables)
 private:
-	Server* server_ {};
-	int m_sockfd {server_->getSockfd()};
-	int m_clientSocket {server_->getSockClient()};
+	int m_sockfd {};
+	int m_clientSocket {};
 	size_t m_sendBuffer_size {};
 	std::unique_ptr<char[]> m_sendBuffer {new char[m_sendBuffer_size]};
-	Request m_req {Request(server_, 4096)};
-	Response m_res {Response(server_, 4096)};
+	Request m_req {Request(this, 4096)};
+	Response m_res {Response(this, 4096)};
 	
 
 public:
@@ -27,8 +26,8 @@ public:
 	/*	: m_sockfd {sockfd}, m_clientSocket {clientSocket}, m_sendBuffer_size {sendBuffer_size}*/
 	/*{*/
 	/*}*/
-	RequestsHandler(Server* server, size_t sendBuffer_size)
-		: server_ {server}, m_sendBuffer_size {sendBuffer_size}
+	RequestsHandler(int sockfd, size_t sendBuffer_size)
+		: m_sockfd {sockfd}, m_sendBuffer_size {sendBuffer_size}
 	{
 	}
 	// basic fonction
