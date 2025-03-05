@@ -63,11 +63,10 @@ void Server::start() {
 
 	int clientSocket =  accept(socket_edp, nullptr, nullptr);
 
-	sockClient = clientSocket;
-
 	RequestsHandler req = RequestsHandler(this, 4096);
 	req.handleClient();
 	/*req.recvRequest();*/
+
 	/*req.parseRequest();*/
 	/*req.sendResponse();*/
 
