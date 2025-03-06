@@ -20,7 +20,7 @@ void Response::recv_request() {
 		if (rec <= 0) {
 			std::cerr << "Client disconnected" << '\n';
 			close(connection_->m_clientSocket);
-			connection_->m_clientSocket = 0;
+			connection_->m_clientSocket = -1;
 			return;
 		}
 		std::cout << '\n';
@@ -47,7 +47,6 @@ void Response::parse_request() {
 
 bool Response::end_requests() {
 	char* body_request {strstr(m_recvBuffer.get(), "\r\n\r\n")};
-	/*size_t fline_size  {strlen(m_recvBuffer.get()) - strlen(body_request)};*/
 	if (body_request) {
 		std::cout << "End requests" << '\n';
 		return false;
@@ -58,7 +57,7 @@ bool Response::end_requests() {
 
 void Response::create_response() {
 	/*std::cout << "create response" << std::endl;*/
-	if (connection_->m_clientSocket == 0) { return;}
+	if (connection_->m_clientSocket < 0) { return;}
 
 	// Sending a response to the client
 	// Creating the reponse buffer
@@ -85,7 +84,7 @@ void Response::create_response() {
 			 static_cast<int>(payload_size),
 			 payload);
 	
-	if (response >= (static_cast<int>(m_resBuffer_size) - m_response)) {
+	if (response >= static_cast<int>(m_resBuffer_size)) {
 		std::cerr << "Response was truncated" << '\n';
 	}
 	else if (response < 0) {
@@ -97,7 +96,7 @@ void Response::create_response() {
 
 
 void Response::send_response() {
-	if (connection_->m_clientSocket == 0) { return;}
+	if (connection_->m_clientSocket < 0) { return;}
 	/*std::cout << "send response" << std::endl;*/
 	// Here we need to send in a loop, send() could send the response partially
 	// We make sure that every bytes is sent

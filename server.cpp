@@ -57,7 +57,6 @@ void Server::start() {
 	// Start listenning, 5 is the limit of connections in the queue
 	listen(sockfd, 5);
 	std::cout << "Listenning on port " << m_port << std::endl;
-
 }
 
 
@@ -66,7 +65,7 @@ void Server::connection() {
 	while (true) {
 		/*count++;*/
 		int clientSocket =  accept(sockfd, nullptr, nullptr);
-		std::cout << clientSocket << '\n';
+		 /*std::cout << clientSocket << '\n';*/
 		if (clientSocket == -1) {
 			std::cerr << "Client socket() error" << '\n';
 			continue;
@@ -97,8 +96,6 @@ void Server::stop() {
 	close(sockfd);
 	return;
 }
-
-
 
 
 bool Server::is_con_active(int& clientfd) {

@@ -29,7 +29,7 @@ void RequestsHandler::createResponse() {
 }
 
 void RequestsHandler::handleClient() {
-	std::cout << "Handling Client" << '\n';
+	/*std::cout << "Handling Client" << '\n';*/
 	/*createRequest();*/
 	createResponse();
 }
