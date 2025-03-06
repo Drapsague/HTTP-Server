@@ -1,7 +1,6 @@
 #include "server.h"
 #include "requestsHandler.h"
 
-#include <cstdio>
 #include <iostream>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -55,27 +54,76 @@ void Server::start() {
 		close(socket_edp);
 		return;
 	}
-
 	// Start listenning, 5 is the limit of connections in the queue
-	listen(socket_edp, 5);
-
+	listen(sockfd, 5);
 	std::cout << "Listenning on port " << m_port << std::endl;
 
-	int clientSocket =  accept(socket_edp, nullptr, nullptr);
-
-	RequestsHandler req = RequestsHandler(this, 4096);
-	req.handleClient();
-	/*req.recvRequest();*/
-
-	/*req.parseRequest();*/
-	/*req.sendResponse();*/
-
-	/*std::cout << "Closing connection" << std::endl;*/
-	/*close(socket_edp);*/
-	/*close(clientSocket);*/
-
-	
 }
+
+
+void Server::connection() {
+	/*int count {};*/
+	while (true) {
+		/*count++;*/
+		int clientSocket =  accept(sockfd, nullptr, nullptr);
+		std::cout << clientSocket << '\n';
+		if (clientSocket == -1) {
+			std::cerr << "Client socket() error" << '\n';
+			continue;
+		}
+
+		RequestsHandler req {this, clientSocket, 4096};
+		req.handleClient();
+		/*if (!is_con_active(clientSocket)) {*/
+		/*	RequestsHandler req {this, clientSocket, 4096};*/
+		/*	req.handleClient();*/
+		/*	RequestsHandler* con {&req};*/
+		/*	m_con_list.insert({clientSocket, con});*/
+		/*}else {*/
+		/*	if (get_active_con(clientSocket) != nullptr){*/
+		/*		get_active_con(clientSocket)->handleClient();*/
+		/*	}*/
+		/*	continue;*/
+		/*}*/
+
+		/*close(clientSocket);*/
+
+	}
+}
+
+
+void Server::stop() {
+	std::cout << "Closing sockets" << '\n';
+	close(sockfd);
+	return;
+}
+
+
+
+
+bool Server::is_con_active(int& clientfd) {
+	auto cl {m_con_list.find(clientfd)};
+	
+	if (cl != m_con_list.end()) {
+		std::cout << cl->first << ":" << cl->second << " -- Connection still active" << '\n';
+		return true;
+	}
+	std::cerr << "Client not found" << '\n';
+	return false;
+}
+
+RequestsHandler* Server::get_active_con(int& clientfd) {
+	auto cl {m_con_list.find(clientfd)};
+
+	if (cl != m_con_list.end()) {
+		return cl->second;
+	}
+	std::cerr << "Client not found" << '\n';
+	return nullptr;
+}
+
+
+
 
 
 
