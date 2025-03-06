@@ -5,12 +5,12 @@
 #include <cstdio>
 #include <memory>
 
-#include "requestsHandler.h"
+/*#include "requestsHandler.h"*/
 
 class Request {
 	// This file allow me to setup what Request.cpp can use (in term of functions and variables)
 private:
-	RequestsHandler* connection_ {};
+	/*RequestsHandler* connection_ {};*/
 
 	int m_sockfd {};
 	int m_clientSock {};
@@ -20,8 +20,12 @@ private:
 
 public:
 	// constructor for the request
-	Request(RequestsHandler* con ,size_t reqBuffer_size)
-		: connection_ {con}, m_reqBuffer_size {reqBuffer_size}
+	/*Request(RequestsHandler* con ,size_t reqBuffer_size)*/
+	/*	: connection_ {con}, m_reqBuffer_size {reqBuffer_size}*/
+	/*{*/
+	/*}*/
+	Request(size_t reqBuffer_size)
+		:  m_reqBuffer_size {reqBuffer_size}
 	{
 	}
 	// basic fonction
