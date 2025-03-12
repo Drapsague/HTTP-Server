@@ -55,8 +55,10 @@ void Server::start() {
 		return;
 	}
 	// Start listenning, 5 is the limit of connections in the queue
+	
 	listen(sockfd, 5);
 	std::cout << "Listenning on port " << m_port << std::endl;
+
 }
 
 
@@ -71,8 +73,10 @@ void Server::connection() {
 			continue;
 		}
 
-		RequestsHandler req {this, clientSocket, 4096};
+		RequestsHandler req {this, clientSocket};
 		req.handleClient();
+
+		/*RequestsHandler* req = new RequestsHandler(this, clientSocket);*/
 		/*if (!is_con_active(clientSocket)) {*/
 		/*	RequestsHandler req {this, clientSocket, 4096};*/
 		/*	req.handleClient();*/
@@ -96,7 +100,6 @@ void Server::stop() {
 	close(sockfd);
 	return;
 }
-
 
 bool Server::is_con_active(int& clientfd) {
 	auto cl {m_con_list.find(clientfd)};
