@@ -1,14 +1,14 @@
 #ifndef CLIENTH_H
 #define CLIENTH_H
 
+#include "server.h"
+
 #include <sys/socket.h>
 #include <cstddef>
 #include <cstdio>
 #include <memory>
 #include <iostream>
 
-#include "server.h"
-/*#include "response.h"*/
 
 class RequestsHandler {
 	// This file allow me to setup what RequestsHandler.cpp can use (in term of functions and variables)
