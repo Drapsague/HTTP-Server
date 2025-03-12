@@ -1,7 +1,6 @@
 #include "requestsHandler.h"
 #include "response.h"
 
-#include <iostream>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -21,7 +20,6 @@ void RequestsHandler::createResponse() {
 	Response m_res {Response(this, 4096)};
 	while(m_clientSocket > 0) {
 		m_res.recv_request();
-		m_res.parse_request();
 		m_res.create_response();
 		m_res.send_response();
 	}
