@@ -1,11 +1,12 @@
-#include "server.h"
-#include "requestsHandler.h"
+#include "../include/server.h"
+#include "../include/requestsHandler.h"
 
 #include <iostream>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
+#include <sys/event.h>
 #include <unistd.h>
 #include <cstring>
 
@@ -23,7 +24,8 @@ void Server::start() {
 	int socket_edp = socket(AF_INET, SOCK_STREAM, 0); 
 	sockfd = socket_edp;
 
-	if (socket_edp == -1) {
+	if (socket_edp == -1) 
+	{
 		std::cerr << "Socket creation failed." << std::endl;
 		close(socket_edp);
 		return;
@@ -42,54 +44,93 @@ void Server::start() {
 	int opt = 1;
 	int bind_settings = setsockopt(socket_edp, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
-	if (bind_settings == -1) {
+	if (bind_settings == -1) 
+	{
 		std::cerr << "Can't re-use the IP and Port given." << std::endl;
 	}
 
 	// Bind the socket to the port and IP we passed in
 	int bind_socket = bind(socket_edp, (struct sockaddr*)&serverAdd, sizeof(serverAdd));
 
-	if (bind_socket == -1) {
+	if (bind_socket == -1) 
+	{
 		std::cerr << "Can't bind the socket to the IP and Port that were given." << std::endl;
 		close(socket_edp);
 		return;
 	}
-	// Start listenning, 5 is the limit of connections in the queue
-	
-	listen(sockfd, 5);
-	std::cout << "Listenning on port " << m_port << std::endl;
 
 }
 
 
 void Server::connection() {
-	/*int count {};*/
-	while (true) {
-		/*count++;*/
-		int clientSocket =  accept(sockfd, nullptr, nullptr);
-		 /*std::cout << clientSocket << '\n';*/
-		if (clientSocket == -1) {
-			std::cerr << "Client socket() error" << '\n';
-			continue;
+	int kq;
+	int new_events;
+	int clientSocket;
+
+	struct kevent change_event[4],
+		event[4];
+	
+	// Start listenning, 5 is the limit of connections in the queue
+	listen(sockfd, 5);
+	std::cout << "Listenning on port " << m_port << std::endl;
+
+	kq = kqueue();
+	EV_SET(change_event, sockfd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, 0);
+
+	// Register kevent with the kqueue.
+	if (kevent(kq, change_event, 1, NULL, 0, NULL) == -1)
+	{
+		perror("kevent");
+		exit(1);
+	}
+	for (;;) 
+	{
+		new_events = kevent(kq, NULL, 0, event, 1, NULL);
+		if (new_events == -1)
+		{
+		    perror("kevent");
+		    exit(1);
+		}
+		std::cout << "A" << '\n';
+		for (int i = 0; new_events > i; i++) {
+
+			int event_fd = event[i].ident;
+			std::cout << "D" << '\n';
+
+			// When the client disconnects an EOF is sent. By closing the file
+			// descriptor the event is automatically removed from the kqueue.
+			if (event[i].flags & EV_EOF)
+			{
+				printf("Client has disconnected");
+				close(event_fd);
+			}
+			else if (event_fd == sockfd) 
+			{
+				std::cout << "C" << '\n';
+
+				clientSocket =  accept(sockfd, nullptr, nullptr);
+
+				if (clientSocket == -1) 
+				{
+					std::cerr << "Client socket() error" << '\n';
+				}
+				EV_SET(change_event, clientSocket, EVFILT_READ, EV_ADD, 0, 0, NULL);
+				if (kevent(kq, change_event, 1, NULL, 0, NULL) < 0)
+				{
+				    perror("kevent error");
+				}
+			}
+			else if (event[i].filter & EVFILT_READ) 
+			{
+				// I need to figure out how to not create a new instance each requests
+				std::cout << "B" << '\n';
+				RequestsHandler req {this, event_fd};
+				req.handleClient();
+			}
+
+
 		}
 
-		RequestsHandler req {this, clientSocket};
-		req.handleClient();
-
-		/*RequestsHandler* req = new RequestsHandler(this, clientSocket);*/
-		/*if (!is_con_active(clientSocket)) {*/
-		/*	RequestsHandler req {this, clientSocket, 4096};*/
-		/*	req.handleClient();*/
-		/*	RequestsHandler* con {&req};*/
-		/*	m_con_list.insert({clientSocket, con});*/
-		/*}else {*/
-		/*	if (get_active_con(clientSocket) != nullptr){*/
-		/*		get_active_con(clientSocket)->handleClient();*/
-		/*	}*/
-		/*	continue;*/
-		/*}*/
-
-		/*close(clientSocket);*/
 
 	}
 }
