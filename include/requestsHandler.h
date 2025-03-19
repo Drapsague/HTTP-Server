@@ -29,10 +29,9 @@ public:
 	RequestsHandler(Server* serv, int& clientSocket)
 		:   m_serv {serv}, m_clientSocket {clientSocket}
 	{
+		std::cout << "creating new RequestHandler instance for the socket : " << m_clientSocket << '\n';
 	}
-	~RequestsHandler() {
-		std::cout << "Desctructing RequestHandler instance" << '\n';
-	}
+	/*~RequestsHandler() {}*/
 	// basic fonction
 	void sendResponse();
 

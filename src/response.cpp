@@ -1,4 +1,4 @@
-#include "response.h"
+#include "../include/response.h"
 
 #include <cstddef>
 #include <cstdio>
@@ -16,26 +16,23 @@ void Response::recv_request() {
 	// Receiving incomming requests
 	// The recv buffer seems to be very sensitive, we need to flush the buffer to make sure there's no memmory leaks
 	// The issue was part of the last requet was in the new one
-	ssize_t rec {};
+	/*ssize_t rec {};*/
 	std::memset(m_recvBuffer.get(), 0, m_recvBuffer_size);
-	/*std::memset(m_resBuffer.get(), 0, m_resBuffer_size);*/
-	do {
-		/*m_recvBuffer = std::make_unique<char[]>(m_resBuffer_size);*/
-		ssize_t rec = recv(connection_->m_clientSocket, m_recvBuffer.get(), m_recvBuffer_size, 0);
-		if (rec > 0) {
-			m_recvBuffer.get()[rec] = '\0';
-		}
-		if (rec <= 0) {
-			std::cerr << "Client disconnected" << '\n';
-			close(connection_->m_clientSocket);
-			connection_->m_clientSocket = -1;
-			return;
-		}
-		std::cout << '\n';
-		std::cout << "Mesage received -- size : " << rec << '\n';
-		std::cout << m_recvBuffer.get() << '\n';
+	std::memset(m_resBuffer.get(), 0, m_resBuffer_size);
 
-	}while(rec != 0);
+	ssize_t rec = recv(connection_->m_clientSocket, m_recvBuffer.get(), m_recvBuffer_size, 0);
+	if (rec > 0) {
+		m_recvBuffer.get()[rec] = '\0';
+	}
+	if (rec <= 0) {
+		std::cerr << "Client disconnected" << '\n';
+		close(connection_->m_clientSocket);
+		connection_->m_clientSocket = -1;
+		return;
+	}
+	std::cout << '\n';
+	std::cout << "Mesage received -- size : " << rec << '\n';
+	std::cout << m_recvBuffer.get() << '\n';
 }
 
 std::unique_ptr<char[]> Response::get_header_file() {
@@ -47,19 +44,20 @@ std::unique_ptr<char[]> Response::get_header_file() {
 	char* f_line {strchr(without_get, ' ')};
 	size_t file_s  {strlen(without_get) - strlen(f_line)};
 
-
 	// Creating a string with the exact size of the first line
 	// And copying the first line in that string
 	// Assigning the header to our class argument
-	std::unique_ptr<char[]> header {new char(file_s + 1)};
-	std::memset(header.get(), 0, file_s + 1);
-	strncpy(header.get(), without_get, file_s);
-	header.get()[file_s] = '\0';
+	std::unique_ptr<char[]> header {new char(file_s + 8)};
+
+	// All the html files are in /public
+	memcpy(header.get(), "/public", 7);
+	// We copy the /<file>.html in the header
+	memcpy(header.get() + 7, without_get, file_s);
+
+	header.get()[file_s + 8] = '\0';
 
 	std::cout << header.get() << '\n';
 	return header;
-
-
 }
 
 
@@ -95,7 +93,6 @@ std::unique_ptr<char[]> Response::get_file(char* header_ptr) {
 	is_valid_header = true;
 
 	return file_ptr;
-
 }
 
 
@@ -117,7 +114,7 @@ void Response::create_response() {
 
 	std::unique_ptr<char[]> file = get_file(header.get());
 
-	if (is_valid_header ==  false) {
+	if (this->is_valid_header ==  false) {
 
 		int response = snprintf(m_resBuffer.get(), m_resBuffer_size, 
 				 "HTTP/1.1 404 Not Found\r\n"
@@ -163,16 +160,16 @@ void Response::send_response() {
 	// Be careful to not delete or nullptr current, .get() only gives a temporary access
 	// Current can be used if buffer_se is not reset or nullptr
 	char* current = m_resBuffer.get();
-	while (rest_bytes != 0) {
-		size_t X = std::min(rest_bytes, m_resBuffer_size);
-		ssize_t sendResponse = send(connection_->m_clientSocket, current, X, 0);
-		rest_bytes -= sendResponse;
-		current += sendResponse;
-		if (sendResponse == -1) {
-			current = nullptr;
-			std::cerr << "Failed to send a response to the client." << '\n';
-			return;
-		}
+
+	// We calculate X by taking the min value between rest bytes to send and the buffer size
+	size_t X = std::min(rest_bytes, m_resBuffer_size);
+	ssize_t sendResponse = send(connection_->m_clientSocket, current, X, 0);
+	rest_bytes -= sendResponse;
+	current += sendResponse;
+	if (sendResponse == -1) {
+		current = nullptr;
+		std::cerr << "Failed to send a response to the client." << '\n';
+		return;
 	}
 	current = nullptr;
 }

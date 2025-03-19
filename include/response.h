@@ -28,14 +28,10 @@ public:
 	Response(RequestsHandler* con ,size_t recvBuffer_size)
 		: connection_ {con}, m_recvBuffer_size {recvBuffer_size}
 	{
-		/*m_resBuffer = std::make_unique<char[]>(m_resBuffer_size);*/
-		/*m_recvBuffer = std::make_unique<char[]>(m_resBuffer_size);*/
+		std::cout << "creating new Respose instance for the socket : " << connection_->m_clientSocket << '\n';
 	}
-	~Response() {std::cout << "Response Instance done" << '\n';}
-	/*Response(int sockfd, int clientSocket, size_t resBuffer_size)*/
-	/*	: m_sockfd{sockfd}, m_sockClient {clientSocket}, m_resBuffer_size {resBuffer_size}*/
-	/*{*/
-	/*}*/
+	/*~Response() {}*/
+
 	// basic fonction
 	void recv_request();
 	std::unique_ptr<char[]> get_header_file();
