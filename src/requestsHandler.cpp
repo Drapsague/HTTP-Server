@@ -9,15 +9,22 @@
 #include <cstring>
 
 
-void RequestsHandler::createResponse() {
-	Response m_res {Response(this, 4096)};
-	m_res.recv_request();
-	m_res.create_response();
-	m_res.send_response();
+/*RequestsHandler::RequestsHandler(Server* serv, int& clientSocket)*/
+/*		:   m_serv {serv}, m_clientSocket {clientSocket}*/
+/*{*/
+/*	std::cout << "creating new RequestHandler instance for the socket : " << m_clientSocket << '\n';*/
+/*}*/
 
+
+void RequestsHandler::createResponse() {
+	m_res = std::make_unique<Response>(this, 4096);
 }
 
 void RequestsHandler::handleClient() {
-	createResponse();
+	/*Response req {this, 4096};*/
+
+	m_res->recv_request();
+	m_res->create_response();
+	m_res->send_response();
 }
 

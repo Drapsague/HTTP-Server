@@ -4,8 +4,9 @@
 #include <cstddef>
 #include <cstdio>
 #include <memory>
+#include <iostream>
 
-#include "requestsHandler.h"
+class RequestsHandler;
 
 class Response {
 	// This file allow me to setup what Response.cpp can use (in term of functions and variables)
@@ -16,20 +17,13 @@ private:
 	const size_t m_resBuffer_size {4096};
 	bool is_valid_header {};
 
-	/*std::unique_ptr<char[]> m_resBuffer {};*/
-	/*std::unique_ptr<char[]> m_recvBuffer {};*/
 	std::unique_ptr<char[]> m_resBuffer {new char[m_recvBuffer_size]};
 	std::unique_ptr<char[]> m_recvBuffer {new char[m_recvBuffer_size]};
-	/*std::unique_ptr<char[]> m_recvBuffer {new char[4096]};*/
 
 
 public:
 	// constructor for the request
-	Response(RequestsHandler* con ,size_t recvBuffer_size)
-		: connection_ {con}, m_recvBuffer_size {recvBuffer_size}
-	{
-		std::cout << "creating new Respose instance for the socket : " << connection_->m_clientSocket << '\n';
-	}
+	Response(RequestsHandler* con ,size_t recvBuffer_size);
 	/*~Response() {}*/
 
 	// basic fonction

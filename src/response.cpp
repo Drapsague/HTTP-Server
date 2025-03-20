@@ -1,4 +1,5 @@
 #include "../include/response.h"
+#include "../include/requestsHandler.h"
 
 #include <cstddef>
 #include <cstdio>
@@ -11,6 +12,13 @@
 #include <unistd.h>
 #include <cstring>
 #include <memory>
+
+
+Response::Response(RequestsHandler* con ,size_t recvBuffer_size)
+	: connection_ {con}, m_recvBuffer_size {recvBuffer_size}
+{
+	std::cout << "creating new RequestHandler instance for the socket : " << connection_->m_clientSocket << '\n';
+}
 
 void Response::recv_request() {
 	// Receiving incomming requests
