@@ -2,6 +2,7 @@
 #include "../include/requestsHandler.h"
 
 #include <iostream>
+#include <memory>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -66,25 +67,33 @@ void Server::connection() {
 	int kq;
 	int new_events;
 	int clientSocket;
-
-	struct kevent change_event[4],
-		event[4];
+	
+	// When we set event[x], x is the number of event we can process at the same time
+	// Same for change_event[x], x is the number of event we cn register with kqueue at the same time
+	struct kevent change_event[4];
+	struct kevent event[4];
 	
 	// Start listenning, 5 is the limit of connections in the queue
 	listen(sockfd, 5);
 	std::cout << "Listenning on port " << m_port << std::endl;
 
+	// We create a list of events
 	kq = kqueue();
+	// We create a new event with our server socket
+	// So each it is triggered we can process the event
 	EV_SET(change_event, sockfd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, 0);
 
 	// Register kevent with the kqueue.
+	// kevent(kq, change_event, 1, NULL, 0, NULL) adds the event
 	if (kevent(kq, change_event, 1, NULL, 0, NULL) == -1)
 	{
 		perror("kevent");
 		exit(1);
 	}
+
 	for (;;) 
 	{
+		// new_event returns the number of triggered events and -1 on error
 		new_events = kevent(kq, NULL, 0, event, 1, NULL);
 		if (new_events == -1)
 		{
@@ -92,8 +101,11 @@ void Server::connection() {
 		    exit(1);
 		}
 		std::cout << "A" << '\n';
+		// This loop each time an event is triggered
+		// Each time a socket is triggered, it is added to the event array
+		// Then we iterate through this array for each event triggered at the same time
 		for (int i = 0; new_events > i; i++) {
-
+			// We can retreive sockets that were triggered
 			int event_fd = event[i].ident;
 			std::cout << "D" << '\n';
 
@@ -107,14 +119,17 @@ void Server::connection() {
 			else if (event_fd == sockfd) 
 			{
 				std::cout << "C" << '\n';
-
+				// This means that there is an incoming connection
+				// Like a client socket binded to our server socket
 				clientSocket =  accept(sockfd, nullptr, nullptr);
 
 				if (clientSocket == -1) 
 				{
 					std::cerr << "Client socket() error" << '\n';
 				}
-				EV_SET(change_event, clientSocket, EVFILT_READ, EV_ADD, 0, 0, NULL);
+				// We add an other event but with the client socket
+				EV_SET(change_event, clientSocket, EVFILT_READ, EV_ADD, 0, 0, 0);
+				// Then register it with the kqueue
 				if (kevent(kq, change_event, 1, NULL, 0, NULL) < 0)
 				{
 				    perror("kevent error");
@@ -125,12 +140,11 @@ void Server::connection() {
 				// I need to figure out how to not create a new instance each requests
 				std::cout << "B" << '\n';
 				RequestsHandler req {this, event_fd};
+				req.createResponse();
 				req.handleClient();
 			}
 
-
 		}
-
 
 	}
 }
