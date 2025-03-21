@@ -91,6 +91,7 @@ void Server::connection() {
 		exit(1);
 	}
 
+	RequestsHandler req {this};
 	for (;;) 
 	{
 		// new_event returns the number of triggered events and -1 on error
@@ -122,6 +123,7 @@ void Server::connection() {
 				// This means that there is an incoming connection
 				// Like a client socket binded to our server socket
 				clientSocket =  accept(sockfd, nullptr, nullptr);
+				req.createResponse();
 
 				if (clientSocket == -1) 
 				{
@@ -139,9 +141,7 @@ void Server::connection() {
 			{
 				// I need to figure out how to not create a new instance each requests
 				std::cout << "B" << '\n';
-				RequestsHandler req {this, event_fd};
-				req.createResponse();
-				req.handleClient();
+				req.handleClient(event_fd);
 			}
 
 		}

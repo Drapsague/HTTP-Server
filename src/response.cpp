@@ -17,7 +17,7 @@
 Response::Response(RequestsHandler* con ,size_t recvBuffer_size)
 	: connection_ {con}, m_recvBuffer_size {recvBuffer_size}
 {
-	std::cout << "creating new RequestHandler instance for the socket : " << connection_->m_clientSocket << '\n';
+	std::cout << "creating new Response instance " << '\n';
 }
 
 void Response::recv_request() {
@@ -28,14 +28,14 @@ void Response::recv_request() {
 	std::memset(m_recvBuffer.get(), 0, m_recvBuffer_size);
 	std::memset(m_resBuffer.get(), 0, m_resBuffer_size);
 
-	ssize_t rec = recv(connection_->m_clientSocket, m_recvBuffer.get(), m_recvBuffer_size, 0);
+	ssize_t rec = recv(m_clientSocket, m_recvBuffer.get(), m_recvBuffer_size, 0);
 	if (rec > 0) {
 		m_recvBuffer.get()[rec] = '\0';
 	}
 	if (rec <= 0) {
 		std::cerr << "Client disconnected" << '\n';
-		close(connection_->m_clientSocket);
-		connection_->m_clientSocket = -1;
+		close(m_clientSocket);
+		m_clientSocket = -1;
 		return;
 	}
 	std::cout << '\n';
@@ -44,7 +44,7 @@ void Response::recv_request() {
 }
 
 std::unique_ptr<char[]> Response::get_header_file() {
-	if (connection_->m_clientSocket < 0) { return nullptr;}
+	if (m_clientSocket < 0) { return nullptr;}
 
 	// Here we retreive the string after the end of the first line
 	// We get the size of that string and substract it to the size of the whole request
@@ -114,7 +114,7 @@ bool Response::end_requests() {
 }
 
 void Response::create_response() {
-	if (connection_->m_clientSocket < 0) { return;}
+	if (m_clientSocket < 0) { return;}
 
 	// Sending a response to the client
 	// Creating the reponse buffer
@@ -161,7 +161,7 @@ void Response::create_response() {
 
 
 void Response::send_response() {
-	if (connection_->m_clientSocket <  0) { return;}
+	if (m_clientSocket <  0) { return;}
 	// Here we need to send in a loop, send() could send the response partially
 	// We make sure that every bytes is sent
 	size_t rest_bytes = m_response;
@@ -171,7 +171,7 @@ void Response::send_response() {
 
 	// We calculate X by taking the min value between rest bytes to send and the buffer size
 	size_t X = std::min(rest_bytes, m_resBuffer_size);
-	ssize_t sendResponse = send(connection_->m_clientSocket, current, X, 0);
+	ssize_t sendResponse = send(m_clientSocket, current, X, 0);
 	rest_bytes -= sendResponse;
 	current += sendResponse;
 	if (sendResponse == -1) {

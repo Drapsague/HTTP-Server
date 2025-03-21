@@ -22,6 +22,7 @@ private:
 
 
 public:
+	int m_clientSocket {};
 	// constructor for the request
 	Response(RequestsHandler* con ,size_t recvBuffer_size);
 	/*~Response() {}*/
