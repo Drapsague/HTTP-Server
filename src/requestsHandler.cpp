@@ -20,9 +20,11 @@ void RequestsHandler::createResponse() {
 	m_res = std::make_unique<Response>(this, 4096);
 }
 
-void RequestsHandler::handleClient() {
+void RequestsHandler::handleClient(int& clientSockfd) {
 	/*Response req {this, 4096};*/
+	m_res->m_clientSocket = clientSockfd;
 
+	std::cout << "Socket ---- " << m_res->m_clientSocket << '\n';
 	m_res->recv_request();
 	m_res->create_response();
 	m_res->send_response();

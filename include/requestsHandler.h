@@ -18,13 +18,12 @@ private:
 	std::unique_ptr<Response> m_res {};
 
 public:
-	RequestsHandler(Server* serv, int& clientSocket)
-			:   m_serv {serv}, m_clientSocket {clientSocket}
+	RequestsHandler(Server* serv)
+			:   m_serv {serv}
 	{
-		std::cout << "creating new RequestHandler instance for the socket : " << m_clientSocket << '\n';
+		/*std::cout << "creating new RequestHandler instance for the socket : " << m_clientSocket << '\n';*/
 	}
 	Server* m_serv {};
-	int m_clientSocket {};
 	// constructor for the socket
 	
 	/*RequestsHandler(Server* serv, int& clientSocket);*/
@@ -32,7 +31,7 @@ public:
 	// basic fonction
 	void sendResponse();
 	void createResponse();
-	void handleClient();
+	void handleClient(int& clientSockfd);
 };
 
 #endif
