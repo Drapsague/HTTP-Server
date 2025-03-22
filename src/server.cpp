@@ -90,8 +90,8 @@ void Server::connection() {
 		perror("kevent");
 		exit(1);
 	}
-
 	RequestsHandler req {this};
+	int count {};
 	for (;;) 
 	{
 		// new_event returns the number of triggered events and -1 on error
@@ -101,33 +101,46 @@ void Server::connection() {
 		    perror("kevent");
 		    exit(1);
 		}
-		std::cout << "A" << '\n';
 		// This loop each time an event is triggered
 		// Each time a socket is triggered, it is added to the event array
 		// Then we iterate through this array for each event triggered at the same time
 		for (int i = 0; new_events > i; i++) {
 			// We can retreive sockets that were triggered
 			int event_fd = event[i].ident;
-			std::cout << "D" << '\n';
 
 			// When the client disconnects an EOF is sent. By closing the file
 			// descriptor the event is automatically removed from the kqueue.
 			if (event[i].flags & EV_EOF)
 			{
-				printf("Client has disconnected");
+				auto closed_con = m_con_list.find(event_fd);
+				if (closed_con != m_con_list.end())
+				{
+					// Delete instance when the client connection is closed
+					std::cerr << "Client has disconnected -- " << event_fd << '\n';
+					// Delete the value and key from the map
+					m_con_list.erase(closed_con);
+				}
 				close(event_fd);
 			}
 			else if (event_fd == sockfd) 
 			{
-				std::cout << "C" << '\n';
 				// This means that there is an incoming connection
 				// Like a client socket binded to our server socket
 				clientSocket =  accept(sockfd, nullptr, nullptr);
-				req.createResponse();
+
+
+				req.createResponse(clientSocket);
+
+				// To count instances
+				count++;
+				req.m_res->m_count = count;
+
+				std::shared_ptr<Response> instance_ptr = req.m_res;
+				m_con_list.insert({clientSocket, instance_ptr});
 
 				if (clientSocket == -1) 
 				{
-					std::cerr << "Client socket() error" << '\n';
+					std::cerr << "Client socket error -- " << clientSocket << '\n';
 				}
 				// We add an other event but with the client socket
 				EV_SET(change_event, clientSocket, EVFILT_READ, EV_ADD, 0, 0, 0);
@@ -140,9 +153,19 @@ void Server::connection() {
 			else if (event[i].filter & EVFILT_READ) 
 			{
 				// I need to figure out how to not create a new instance each requests
-				std::cout << "B" << '\n';
-				req.handleClient(event_fd);
+				auto it = m_con_list.find(event_fd);
+				if (it != m_con_list.end())
+				{
+					req.handleClient(it->second);
+				}
 			}
+
+			// Just to see the map, and active connections
+			for (const auto &pair : m_con_list) {
+				std::cout << pair.first << " " << pair.second << '\n';
+    }
+
+			
 
 		}
 
@@ -155,28 +178,6 @@ void Server::stop() {
 	close(sockfd);
 	return;
 }
-
-bool Server::is_con_active(int& clientfd) {
-	auto cl {m_con_list.find(clientfd)};
-	
-	if (cl != m_con_list.end()) {
-		std::cout << cl->first << ":" << cl->second << " -- Connection still active" << '\n';
-		return true;
-	}
-	std::cerr << "Client not found" << '\n';
-	return false;
-}
-
-RequestsHandler* Server::get_active_con(int& clientfd) {
-	auto cl {m_con_list.find(clientfd)};
-
-	if (cl != m_con_list.end()) {
-		return cl->second;
-	}
-	std::cerr << "Client not found" << '\n';
-	return nullptr;
-}
-
 
 
 

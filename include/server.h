@@ -1,6 +1,8 @@
 #ifndef SERVER_H
 #define SERVER_H
 
+#include "response.h"
+#include <memory>
 #include <unordered_map>
 
 class RequestsHandler;
@@ -9,7 +11,7 @@ class Server {
 	// This file allow me to setup what server.cpp can use (in term of functions and variables)
 private:
 	int m_port {};
-	std::unordered_map<int, RequestsHandler*> m_con_list {};
+	std::unordered_map<int, std::shared_ptr<Response>> m_con_list {};
 
 
 public:
@@ -24,8 +26,6 @@ public:
 	void start() ; 
 	void stop();
 	void connection();
-	bool is_con_active(int& clientfd);
-	RequestsHandler* get_active_con(int& clientfd);
 
 };
 
