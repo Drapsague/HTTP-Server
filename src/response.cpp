@@ -14,21 +14,22 @@
 #include <memory>
 
 
-Response::Response(RequestsHandler* con ,size_t recvBuffer_size)
-	: connection_ {con}, m_recvBuffer_size {recvBuffer_size}
+Response::Response(int& clientfd)
+	: m_clientSocket {clientfd}
 {
-	std::cout << "creating new Response instance " << '\n';
+	std::cout << "creating new Response instance " << clientfd << '\n';
 }
 
 void Response::recv_request() {
 	// Receiving incomming requests
 	// The recv buffer seems to be very sensitive, we need to flush the buffer to make sure there's no memmory leaks
 	// The issue was part of the last requet was in the new one
-	/*ssize_t rec {};*/
 	std::memset(m_recvBuffer.get(), 0, m_recvBuffer_size);
 	std::memset(m_resBuffer.get(), 0, m_resBuffer_size);
 
 	ssize_t rec = recv(m_clientSocket, m_recvBuffer.get(), m_recvBuffer_size, 0);
+
+	std::cout << "---- instance " << m_count << " ----" << '\n';
 	if (rec > 0) {
 		m_recvBuffer.get()[rec] = '\0';
 	}

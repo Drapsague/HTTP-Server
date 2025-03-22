@@ -16,17 +16,14 @@
 /*}*/
 
 
-void RequestsHandler::createResponse() {
-	m_res = std::make_unique<Response>(this, 4096);
+void RequestsHandler::createResponse(int& clientSockfd) {
+	m_res = std::make_shared<Response>(clientSockfd);
+
 }
 
-void RequestsHandler::handleClient(int& clientSockfd) {
-	/*Response req {this, 4096};*/
-	m_res->m_clientSocket = clientSockfd;
-
-	std::cout << "Socket ---- " << m_res->m_clientSocket << '\n';
-	m_res->recv_request();
-	m_res->create_response();
-	m_res->send_response();
+void RequestsHandler::handleClient(std::shared_ptr<Response> res_ptr) {
+	res_ptr->recv_request();
+	res_ptr->create_response();
+	res_ptr->send_response();
 }
 

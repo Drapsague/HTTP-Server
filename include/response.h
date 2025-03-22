@@ -11,11 +11,10 @@ class RequestsHandler;
 class Response {
 	// This file allow me to setup what Response.cpp can use (in term of functions and variables)
 private:
-	RequestsHandler* connection_ {};
-	int m_response {};
-	const size_t m_recvBuffer_size {};
+	const size_t m_recvBuffer_size {4096};
 	const size_t m_resBuffer_size {4096};
 	bool is_valid_header {};
+	int m_response {};
 
 	std::unique_ptr<char[]> m_resBuffer {new char[m_recvBuffer_size]};
 	std::unique_ptr<char[]> m_recvBuffer {new char[m_recvBuffer_size]};
@@ -23,9 +22,14 @@ private:
 
 public:
 	int m_clientSocket {};
+	int m_count;
+
 	// constructor for the request
-	Response(RequestsHandler* con ,size_t recvBuffer_size);
-	/*~Response() {}*/
+	Response(int& clientfd);
+	~Response() 
+	{
+		std::cout << "Destroying Response instance : " << m_count << '\n';
+	}
 
 	// basic fonction
 	void recv_request();
