@@ -34,6 +34,7 @@ public:
 	// basic fonction
 	void recv_request();
 	std::unique_ptr<char[]> get_header_file();
+	std::unique_ptr<char[]> get_content();
 	void create_response();
 	void send_response();
 	bool end_requests();
