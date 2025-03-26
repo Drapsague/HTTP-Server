@@ -69,6 +69,26 @@ std::unique_ptr<char[]> Response::get_header_file() {
 	return header;
 }
 
+std::unique_ptr<char[]> Response::get_content() {
+	if (m_clientSocket < 0) { return nullptr;}
+
+	// Getting the message sent, all messages have the prefix '&' for easier parsing
+	// strchr returns a pointer to the fisrt occurence of the char
+	char* message {strchr(m_recvBuffer.get(), '#')};
+	size_t message_size  {strlen(m_recvBuffer.get()) - strlen(message)};
+
+	// Creating a string with the exact size of the first line
+	// And copying the first line in that string
+	// Assigning the header to our class argument
+	std::unique_ptr<char[]> message_content {new char(message_size + 1)};
+
+	memcpy(message_content.get(), message + 1, message_size);
+
+	message_content.get()[strlen(message_content.get()) + 1] = '\0';
+
+	std::cout << "Message sent is " << message_content.get() << '\n';
+	return message_content;
+}
 
 std::unique_ptr<char[]> Response::get_file(char* header_ptr) {
 	is_valid_header = false;
@@ -122,6 +142,8 @@ void Response::create_response() {
 	std::unique_ptr<char[]> header = get_header_file();
 
 	std::unique_ptr<char[]> file = get_file(header.get());
+
+	std::unique_ptr<char[]> content = get_content();
 
 	if (this->is_valid_header ==  false) {
 
