@@ -25,5 +25,6 @@ void RequestsHandler::handleClient(std::shared_ptr<Response> res_ptr) {
 	res_ptr->recv_request();
 	res_ptr->create_response();
 	res_ptr->send_response();
+	res_ptr->send_response();
 }
 

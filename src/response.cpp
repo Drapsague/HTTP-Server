@@ -42,6 +42,7 @@ void Response::recv_request() {
 	std::cout << '\n';
 	std::cout << "Mesage received -- size : " << rec << '\n';
 	std::cout << m_recvBuffer.get() << '\n';
+	std::cout << "-----------------------------" << '\n';
 }
 
 std::unique_ptr<char[]> Response::get_header_file() {
@@ -52,18 +53,19 @@ std::unique_ptr<char[]> Response::get_header_file() {
 	char* without_get {m_recvBuffer.get() + 4}; // Getting the string without "GET" -> 4, but if "POST" -> 5
 	char* f_line {strchr(without_get, ' ')};
 	size_t file_s  {strlen(without_get) - strlen(f_line)};
+	std::cout << "header size" << file_s << '\n';
 
 	// Creating a string with the exact size of the first line
 	// And copying the first line in that string
 	// Assigning the header to our class argument
-	std::unique_ptr<char[]> header {new char(file_s + 8)};
+	std::unique_ptr<char[]> header {new char(file_s + 7)};
 
 	// All the html files are in /public
-	memcpy(header.get(), "/public", 7);
+	memcpy(header.get(), "public", 6);
 	// We copy the /<file>.html in the header
-	memcpy(header.get() + 7, without_get, file_s);
+	memcpy(header.get() + 6, without_get, file_s);
 
-	header.get()[file_s + 8] = '\0';
+	header.get()[file_s + 6] = '\0';
 
 	std::cout << header.get() << '\n';
 	return header;
@@ -72,10 +74,14 @@ std::unique_ptr<char[]> Response::get_header_file() {
 std::unique_ptr<char[]> Response::get_content() {
 	if (m_clientSocket < 0) { return nullptr;}
 
-	// Getting the message sent, all messages have the prefix '&' for easier parsing
+	// Getting the message sent, all messages have the prefix '#' for easier parsing
 	// strchr returns a pointer to the fisrt occurence of the char
-	char* message {strchr(m_recvBuffer.get(), '#')};
-	size_t message_size  {strlen(m_recvBuffer.get()) - strlen(message)};
+	char* buffer {m_recvBuffer.get()};
+	char* message {strchr(buffer, '{')};
+
+	// When we get the message we have '<message>\r\n'
+	// We have to remove the two last char for json parsing reason
+	size_t message_size = strlen(message + 1) - 2;
 
 	// Creating a string with the exact size of the first line
 	// And copying the first line in that string
@@ -84,13 +90,40 @@ std::unique_ptr<char[]> Response::get_content() {
 
 	memcpy(message_content.get(), message + 1, message_size);
 
-	message_content.get()[strlen(message_content.get()) + 1] = '\0';
+	message_content.get()[message_size] = '\0';
 
-	std::cout << "Message sent is " << message_content.get() << '\n';
 	return message_content;
 }
 
-std::unique_ptr<char[]> Response::get_file(char* header_ptr) {
+void Response::write_json(const char* header_ptr) {
+	std::unique_ptr<char[]> message = get_content();
+	
+	if (!header_ptr) 
+	{
+		std::cerr << "Header is a nullptr" << '\n';
+		is_valid_header = false;
+		return;
+	}
+	size_t buffer_size = strlen(message.get()) + 46;
+	std::unique_ptr<char[]> json_buffer {new char (buffer_size)};
+
+	// Copy the JSON payload in the buffer
+	snprintf(json_buffer.get(), buffer_size, 
+			"{\n \"user\": \"%d\",\n \"message\": \"%s\"\n},\n",
+			m_count,
+			message.get());
+
+	// Here we write the JSON we created in the JSON database
+	std::ofstream file(header_ptr, std::ios::app);
+	if (file.is_open())
+	{
+		std::cout << "Writing message in JSON" << '\n';
+		file << json_buffer.get();
+		file.close();
+	}
+}
+
+std::unique_ptr<char[]> Response::get_file(const char* header_ptr) {
 	is_valid_header = false;
 	std::unique_ptr<char[]> file_ptr {};
 	if (!header_ptr) {
@@ -99,7 +132,7 @@ std::unique_ptr<char[]> Response::get_file(char* header_ptr) {
 		return file_ptr;
 	}
 	// We need this to read the file (kind like a socket)
-	std::ifstream file(header_ptr + 1, std::ios::binary);
+	std::ifstream file(header_ptr, std::ios::binary);
 	if (!file) {
 		std::cerr << "Error while getting the file" << '\n';
 		is_valid_header = false;
@@ -118,21 +151,14 @@ std::unique_ptr<char[]> Response::get_file(char* header_ptr) {
 	file.read(file_ptr.get(), file_size);
 	file.close();
 
-	std::cout << file_ptr.get() << '\n';
+	std::cout << "header after reading" << header_ptr << '\n';
+	std::cout << "File print  -- \n" <<  file_ptr.get() << '\n';
+	std::cout << '\n';
 	is_valid_header = true;
 
 	return file_ptr;
 }
 
-
-bool Response::end_requests() {
-	char* body_request {strstr(m_recvBuffer.get(), "\r\n\r\n")};
-	if (body_request) {
-		std::cout << "End requests" << '\n';
-		return false;
-	}
-	return true;
-}
 
 void Response::create_response() {
 	if (m_clientSocket < 0) { return;}
@@ -140,10 +166,17 @@ void Response::create_response() {
 	// Sending a response to the client
 	// Creating the reponse buffer
 	std::unique_ptr<char[]> header = get_header_file();
+	
+	// We need to store the header because header points to the recv buffer
+	// But we modify the buffer in get_content
+	// The header ptr does not points correctly because we modify the buffer
+	char temp_header[512] {};
+	std::strcpy(temp_header, header.get());
 
-	std::unique_ptr<char[]> file = get_file(header.get());
+	write_json(temp_header);
+	
+	std::unique_ptr<char[]> file = get_file(temp_header);
 
-	std::unique_ptr<char[]> content = get_content();
 
 	if (this->is_valid_header ==  false) {
 
@@ -164,7 +197,7 @@ void Response::create_response() {
 	// Content-Length needs to match the size of the payload
 	int response = snprintf(m_resBuffer.get(), m_recvBuffer_size, 
 			 "HTTP/1.1 200 OK\r\n"
-			 "Content-Type: text/html\r\n"
+			 "Content-Type: application/json\r\n"
 			 "Content-Length: %d\r\n"
 			 "\r\n"
 			 "%s\r\n",
