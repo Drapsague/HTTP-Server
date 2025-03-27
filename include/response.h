@@ -38,7 +38,8 @@ public:
 	void create_response();
 	void send_response();
 	bool end_requests();
-	std::unique_ptr<char[]> get_file(char* header_ptr);
+	void write_json(const char* header_ptr);
+	std::unique_ptr<char[]> get_file(const char* header_ptr);
 	
 };
 
