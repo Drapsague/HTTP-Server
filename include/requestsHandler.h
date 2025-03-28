@@ -28,9 +28,9 @@ public:
 	
 	/*~RequestsHandler() {}*/
 	// basic fonction
-	void sendResponse();
 	void createResponse(int& clientfd);
 	void handleClient(std::shared_ptr<Response>);
+	void sendDatabase(std::shared_ptr<Response>);
 };
 
 #endif

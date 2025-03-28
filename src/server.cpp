@@ -163,12 +163,11 @@ void Server::connection() {
 			// Just to see the map, and active connections
 			std::cout << '\n';
 			std::cout << "--------- Active Con ---------" << '\n';
-			for (const auto &pair : m_con_list) {
-				std::cout << pair.first << " " << pair.second << '\n';
+			for (auto &pair : m_con_list) {
+				std::cout << pair.first << " : " << pair.second << '\n';
+				req.sendDatabase(pair.second);
 			}
 			std::cout << '\n';
-
-			
 
 		}
 

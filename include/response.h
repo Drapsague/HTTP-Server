@@ -37,6 +37,7 @@ public:
 	std::unique_ptr<char[]> get_content();
 	void create_response();
 	void send_response();
+	void send_database();
 	bool end_requests();
 	void write_json(const char* header_ptr);
 	std::unique_ptr<char[]> get_file(const char* header_ptr);
