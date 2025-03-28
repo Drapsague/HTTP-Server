@@ -53,7 +53,6 @@ std::unique_ptr<char[]> Response::get_header_file() {
 	char* without_get {m_recvBuffer.get() + 4}; // Getting the string without "GET" -> 4, but if "POST" -> 5
 	char* f_line {strchr(without_get, ' ')};
 	size_t file_s  {strlen(without_get) - strlen(f_line)};
-	std::cout << "header size" << file_s << '\n';
 
 	// Creating a string with the exact size of the first line
 	// And copying the first line in that string
@@ -67,7 +66,7 @@ std::unique_ptr<char[]> Response::get_header_file() {
 
 	header.get()[file_s + 6] = '\0';
 
-	std::cout << header.get() << '\n';
+	// std::cout << header.get() << '\n';
 	return header;
 }
 
@@ -117,7 +116,6 @@ void Response::write_json(const char* header_ptr) {
 	std::ofstream file(header_ptr, std::ios::app);
 	if (file.is_open())
 	{
-		std::cout << "Writing message in JSON" << '\n';
 		file << json_buffer.get();
 		file.close();
 	}
@@ -151,9 +149,6 @@ std::unique_ptr<char[]> Response::get_file(const char* header_ptr) {
 	file.read(file_ptr.get(), file_size);
 	file.close();
 
-	std::cout << "header after reading" << header_ptr << '\n';
-	std::cout << "File print  -- \n" <<  file_ptr.get() << '\n';
-	std::cout << '\n';
 	is_valid_header = true;
 
 	return file_ptr;
@@ -177,7 +172,11 @@ void Response::create_response() {
 	
 	std::unique_ptr<char[]> file = get_file(temp_header);
 
+	// m_response is the number of bytes sent
+	// It is used when we send requests to make sure all bytes are sent
+	m_response = 0;
 
+	// 404 handling
 	if (this->is_valid_header ==  false) {
 
 		int response = snprintf(m_resBuffer.get(), m_resBuffer_size, 
@@ -190,12 +189,11 @@ void Response::create_response() {
 	}
 
 	
-	m_response = 0;
 	// Adding 2 because we add \r\n after the payload
 	size_t payload_size {strlen(file.get()) + 2};
 
 	// Content-Length needs to match the size of the payload
-	int response = snprintf(m_resBuffer.get(), m_recvBuffer_size, 
+	int response = snprintf(m_resBuffer.get(), m_resBuffer_size, 
 			 "HTTP/1.1 200 OK\r\n"
 			 "Content-Type: application/json\r\n"
 			 "Content-Length: %d\r\n"
@@ -226,6 +224,7 @@ void Response::send_response() {
 	char* current = m_resBuffer.get();
 
 	// We calculate X by taking the min value between rest bytes to send and the buffer size
+	std::cout << "1 - Sending -- \n" << m_resBuffer.get() << '\n';
 	size_t X = std::min(rest_bytes, m_resBuffer_size);
 	ssize_t sendResponse = send(m_clientSocket, current, X, 0);
 	rest_bytes -= sendResponse;
@@ -236,4 +235,59 @@ void Response::send_response() {
 		return;
 	}
 	current = nullptr;
+}
+
+
+void Response::send_database() {
+	if (m_clientSocket <  0) { return;}
+	 std::cout << "Sending database to -- " << m_clientSocket << '\n';
+
+	std::unique_ptr<char[]> file = get_file("public/database.json");
+
+	// Adding 2 because we add \r\n after the payload
+	size_t payload_size {strlen(file.get()) + 2};
+
+	size_t send_buffer_size {4096};
+
+	std::unique_ptr<char[]> send_buffer {new char[send_buffer_size]};
+	std::memset(send_buffer.get(), 0, send_buffer_size);
+
+	// Content-Length needs to match the size of the payload
+	int response = snprintf(send_buffer.get(), send_buffer_size, 
+			 "HTTP/1.1 200 OK\r\n"
+			 "Content-Type: application/json\r\n"
+			 "Content-Length: %d\r\n"
+			 "\r\n"
+			 "%s\r\n",
+			 static_cast<int>(payload_size),
+			 file.get());
+	
+	if (response >= static_cast<int>(send_buffer_size)) {
+		std::cerr << "Response was truncated" << '\n';
+		return;
+	}
+	else if (response < 0) {
+		std::cerr << "Error formating response" << '\n';
+		return;
+	}
+
+	// Here we need to send in a loop, send() could send the response partially
+	// We make sure that every bytes is sent
+	size_t rest_bytes = response;
+	// Be careful to not delete or nullptr current, .get() only gives a temporary access
+	// Current can be used if buffer_se is not reset or nullptr
+	char* current = send_buffer.get();
+
+	// We calculate X by taking the min value between rest bytes to send and the buffer size
+	size_t X = std::min(rest_bytes, send_buffer_size);
+	ssize_t sendResponse = send(m_clientSocket, current, X, 0);
+	rest_bytes -= sendResponse;
+	current += sendResponse;
+	if (sendResponse == -1) {
+		current = nullptr;
+		std::cerr << "Failed to send a response to the client." << '\n';
+		return;
+	}
+	current = nullptr;
+	std::cout << "2 - Sending -- \n" << send_buffer.get() << '\n';
 }
