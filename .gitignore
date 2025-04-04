@@ -13,4 +13,5 @@ Makefile
 
 # Executable files
 HTTP_server
+Client/client
 
