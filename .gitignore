@@ -2,6 +2,12 @@
 *.o
 .clangd
 
+# FTXUI
+build/
+Client/ui/build/
+Client/ui/FTXUI/
+Client/ui/build/_deps/
+
 # Makefile
 Makefile
 

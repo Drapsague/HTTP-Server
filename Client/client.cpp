@@ -64,7 +64,6 @@ void Client::create_response() {
 	// Creating the reponse buffer
 	
 	m_response = 0;
-	std::cout << "Enter message : ";
 	std::cin >> m_payload.get();
 	
 	char* stop_paylaod {strstr(m_payload.get(), "QUIT")};
@@ -140,6 +139,7 @@ ssize_t Client::recv_request() {
 	std::cout << '\n';
 	std::cout << "Mesage received" << '\n';
 	std::cout << m_recvBuffer.get() << '\n';
+	std::cout << "Enter message : ";
 	return rec;
 
 

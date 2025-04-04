@@ -156,7 +156,17 @@ void Server::connection() {
 				auto it = m_con_list.find(event_fd);
 				if (it != m_con_list.end())
 				{
+					std::cout << "Before " << it->second.use_count() << '\n';
 					req.handleClient(it->second);
+					std::cout << "After " << it->second.use_count() << '\n';
+				}
+				for (auto &pair : m_con_list) {
+					// Here the server send the updated database to each client
+					// Except the one who just sent a message (because he already have the last database)
+					if (pair.first !=  event_fd) 
+					{
+						req.sendDatabase(pair.second);
+					}
 				}
 			}
 
@@ -165,7 +175,6 @@ void Server::connection() {
 			std::cout << "--------- Active Con ---------" << '\n';
 			for (auto &pair : m_con_list) {
 				std::cout << pair.first << " : " << pair.second << '\n';
-				req.sendDatabase(pair.second);
 			}
 			std::cout << '\n';
 
