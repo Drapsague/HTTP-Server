@@ -57,7 +57,7 @@ std::unique_ptr<char[]> Response::get_header_file() {
 	// Creating a string with the exact size of the first line
 	// And copying the first line in that string
 	// Assigning the header to our class argument
-	std::unique_ptr<char[]> header {new char(file_s + 7)};
+	std::unique_ptr<char[]> header {new char[file_s + 7]};
 
 	// All the html files are in /public
 	memcpy(header.get(), "public", 6);
@@ -77,15 +77,24 @@ std::unique_ptr<char[]> Response::get_content() {
 	// strchr returns a pointer to the fisrt occurence of the char
 	char* buffer {m_recvBuffer.get()};
 	char* message {strchr(buffer, '{')};
-
+	if (!message) 
+	{
+		std::cerr << "[ERROR] '{' not found in buffer: " << buffer << std::endl;
+		return nullptr;
+	}
 	// When we get the message we have '<message>\r\n'
 	// We have to remove the two last char for json parsing reason
-	size_t message_size = strlen(message + 1) - 2;
-
+	size_t raw_size = strlen(message + 1);
+	if (raw_size < 2) 
+	{
+		std::cerr << "[ERROR] Message too short after '{': " << message + 1 << std::endl;
+		return nullptr;
+	}
+	size_t message_size = raw_size - 2;
 	// Creating a string with the exact size of the first line
 	// And copying the first line in that string
 	// Assigning the header to our class argument
-	std::unique_ptr<char[]> message_content {new char(message_size + 1)};
+	std::unique_ptr<char[]> message_content {new char [message_size + 1]};
 
 	memcpy(message_content.get(), message + 1, message_size);
 
@@ -96,6 +105,13 @@ std::unique_ptr<char[]> Response::get_content() {
 
 void Response::write_json(const char* header_ptr) {
 	std::unique_ptr<char[]> message = get_content();
+
+	if (!message) 
+	{
+		std::cerr << "[ERROR] Message is not valid" << std::endl;
+		is_valid_header = false;
+		return;
+	}
 	
 	if (!header_ptr) 
 	{
@@ -104,7 +120,7 @@ void Response::write_json(const char* header_ptr) {
 		return;
 	}
 	size_t buffer_size = strlen(message.get()) + 46;
-	std::unique_ptr<char[]> json_buffer {new char (buffer_size)};
+	std::unique_ptr<char[]> json_buffer {new char [buffer_size]};
 
 	// Copy the JSON payload in the buffer
 	snprintf(json_buffer.get(), buffer_size, 
@@ -165,12 +181,12 @@ void Response::create_response() {
 	// We need to store the header because header points to the recv buffer
 	// But we modify the buffer in get_content
 	// The header ptr does not points correctly because we modify the buffer
-	char temp_header[512] {};
-	std::strcpy(temp_header, header.get());
+	// char temp_header[512] {};
+	// std::strcpy(temp_header, header.get());
 
-	write_json(temp_header);
+	write_json(header.get());
 	
-	std::unique_ptr<char[]> file = get_file(temp_header);
+	std::unique_ptr<char[]> file = get_file(header.get());
 
 	// m_response is the number of bytes sent
 	// It is used when we send requests to make sure all bytes are sent

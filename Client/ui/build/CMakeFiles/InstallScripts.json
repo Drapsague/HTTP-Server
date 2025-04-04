@@ -1,0 +1,10 @@
+{
+	"InstallScripts" : 
+	[
+		"/Users/edualc/Documents/2_Dev/CPP/HTTP-Server/Client/ui/build/cmake_install.cmake",
+		"/Users/edualc/Documents/2_Dev/CPP/HTTP-Server/Client/ui/build/_deps/ftxui-build/cmake_install.cmake",
+		"/Users/edualc/Documents/2_Dev/CPP/HTTP-Server/Client/ui/build/_deps/ftxui-build/examples/cmake_install.cmake",
+		"/Users/edualc/Documents/2_Dev/CPP/HTTP-Server/Client/ui/build/_deps/ftxui-build/doc/cmake_install.cmake"
+	],
+	"Parallel" : false
+}
