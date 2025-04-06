@@ -14,10 +14,33 @@
 #include "ftxui/component/screen_interactive.hpp"  // for Component, ScreenInteractive
 #include "ftxui/dom/elements.hpp"  // for text, hbox, separator, Element, operator|, vbox, border
 #include "ftxui/util/ref.hpp"  // for Ref
+//
+
+
+using namespace ftxui;
+
+struct MessageOption {
+   std::string username;
+   std::string message;
+   bool is_me;
+   Color color;
+};
  
+Element RenderMessage(const std::string &message, const MessageOption& opt) {
+   auto bubble = text(message) | color(opt.color);
+   if(opt.is_me) {
+      return vbox({
+                  hbox({text("[You] : "), bubble, filler()}) | color(Color::Green)
+                  });
+   }
+   else {
+      return vbox({
+                  hbox({text("[" + opt.username + "] : "), bubble, filler()}) | color(opt.color)
+               });
+   }
+}
 
 int main() {
-   using namespace ftxui;
 
    // The data:
    std::string username {};
@@ -49,14 +72,22 @@ int main() {
 
    screen.Loop(username_layout_event);
 
-      
+
 
 
 
    if (is_username) {
 
       // This is the main list for the current conv
-      std::vector<std::string> message_list;
+      // std::vector<std::string> message_list;
+      std::vector<MessageOption> message_list = {
+            {"Laeti", "Salut!", false, Color::Cyan},
+            {"Terry", "Hey comment ca va ?", false, Color::Yellow},
+            {"Gas", "Mais nan ca va l'equipe ?", true, Color::Green},
+            {"Laeti", "Salut!", false, Color::Cyan},
+            {"Terry", "Hey comment ca va ?", false, Color::Yellow},
+            {"Gas", "Mais nan ca va l'equipe ?", true, Color::Green},
+            };
       std::string message {};
       Component input_message = Input(&message, "Enter your message...");
 
@@ -66,13 +97,14 @@ int main() {
                                  // message will be displayed
                                  std::vector<Element> bubbles;
                                  for (auto &msg : message_list) {
-                                    bubbles.push_back(text("[" + username + "] : " + msg) | color(Color::Green)); 
+                                    bubbles.push_back(RenderMessage(msg.message, msg)); 
+                                    // bubbles.push_back(text("[" + username + "] : " + msg) | color(Color::Green)); 
                                  }
                                          return vbox({
                                             // vscroll_indicator creates a scroll bar
                                             // And frame will lock the screen to the scroll bar view
                                             vbox(std::move(bubbles)) | border | vscroll_indicator | frame,
-                                            separatorHeavy(),
+                                            separator(),
                                             hbox({text("[Message] : ") , 
                                                  input_message->Render()
                                                 }) | border,
@@ -84,7 +116,11 @@ int main() {
       Component message_layout_event = CatchEvent(message_layout, [&](Event event){
                                 // Event::Return means the user press Enter 
                                  if(event == Event::Return && !message.empty()) {
-                                    message_list.push_back(message); 
+                                    MessageOption opt {};
+                                    opt.is_me = true;
+                                    opt.username = username;
+                                    opt.message = message;
+                                    message_list.push_back(opt); 
                                     message.clear();
                                     return true;
                                  }
@@ -94,6 +130,10 @@ int main() {
       screen.Loop(message_layout_event);
 
    }
+
+
+
+
 
    return 0;
 
