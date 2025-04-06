@@ -29,7 +29,6 @@ void Client::connection() {
 	// inet_pton converts <IP> in bytes and handles errors
 	inet_pton(AF_INET, "127.0.0.1", &(serverAdd.sin_addr));
 
-
 	int con = connect(m_sockfd, (struct sockaddr*)&serverAdd, sizeof(serverAdd));
 
 	if (con == -1) {
@@ -60,9 +59,6 @@ void Client::create_response() {
 	if (m_sockfd < 0) { return;}
 	std::memset(m_payload.get(), 0, m_resBuffer_size);
 
-	// Sending a response to the client
-	// Creating the reponse buffer
-	
 	m_response = 0;
 	std::cin >> m_payload.get();
 	
@@ -74,8 +70,9 @@ void Client::create_response() {
 	// Adding 2 because we add \r\n after the payload
 	size_t payload_size {strlen(m_payload.get()) + 2};
 
-	// Content-Length needs to match the size of the payload
+	// Creating the reponse buffer
 	m_resBuffer = std::make_unique<char[]>(m_resBuffer_size);
+	// Content-Length needs to match the size of the payload
 	int response = snprintf(m_resBuffer.get(), m_resBuffer_size, 
 			 "GET /database.json HTTP/1.1\r\n"
 			 "Content-Type: application/json\r\n"
@@ -94,7 +91,6 @@ void Client::create_response() {
 		return;
 	}
 	m_response = response;
-	
 }
 
 
@@ -141,6 +137,4 @@ ssize_t Client::recv_request() {
 	std::cout << m_recvBuffer.get() << '\n';
 	std::cout << "Enter message : ";
 	return rec;
-
-
 }
