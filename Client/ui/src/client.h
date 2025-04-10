@@ -5,6 +5,8 @@
 #include <memory>
 #include <iostream>
 #include <thread>
+#include <map>
+
 #include "ftxui/dom/elements.hpp"  // for text, hbox, separator, Element, operator|, vbox, border
 #include "ftxui/component/component.hpp"       // for Input, Renderer, Vertical
 #include "ftxui/component/component_base.hpp"  // for ComponentBase
@@ -32,6 +34,12 @@ private:
 
 	
 public:
+	std::vector<ftxui::Color> color_list {
+		ftxui::Color::Blue,
+		ftxui::Color::BlueViolet,
+		ftxui::Color::Violet,
+		ftxui::Color::DarkOliveGreen3Bis
+	};
 	std::unique_ptr<char[]> m_resBuffer {};
 	std::unique_ptr<char[]> m_recvBuffer {};
 	std::unique_ptr<char[]> m_payload {};
@@ -39,6 +47,7 @@ public:
 	std::string recv_message {};
 	std::string m_username {};
 	int m_sockfd {};
+	std::map<std::string, ftxui::Color> usr_color_list {};
 	// constructor for the socket
 	Client(int port, size_t buffer_size) 
 		: m_port {port}, m_resBuffer_size {buffer_size}

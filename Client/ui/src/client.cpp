@@ -77,11 +77,11 @@ void Client::create_response(std::string message) {
 			 "Content-Length: %d\r\n"
 			 "Connection : keep-alive\r\n"
 			 "\r\n"
-			 // "{\"username\":\"%s\",\"message\":\"%s\"}\r\n",
-			 "{\"message\":\"%s\"}\r\n",
-			 // static_cast<int>(message.length() + m_username.length() + 30),
-			 static_cast<int>(message.length()),
-			 // m_username.c_str(),
+			 "{\"username\":\"%s\",\"message\":\"%s\"}\r\n",
+			 // "{\"message\":\"%s\"}\r\n",
+			 static_cast<int>(message.length() + m_username.length() + 30),
+			 // static_cast<int>(message.length()),
+			 m_username.c_str(),
 			 message.c_str());
 	
 	if (response >= static_cast<int>(m_resBuffer_size)) {
