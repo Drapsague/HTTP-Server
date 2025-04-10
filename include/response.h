@@ -35,9 +35,10 @@ public:
 	void recv_request();
 	std::unique_ptr<char[]> get_header_file();
 	std::unique_ptr<char[]> get_content();
+	std::unique_ptr<char[]> get_serialized_content();
 	void create_response();
 	void send_response();
-	void send_database();
+	void send_database(std::shared_ptr<char[]> serialized_message);
 	bool end_requests();
 	void write_json(const char* header_ptr);
 	std::unique_ptr<char[]> get_file(const char* header_ptr);

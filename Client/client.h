@@ -19,7 +19,6 @@ private:
 	std::unique_ptr<char[]> m_recvBuffer {};
 	std::unique_ptr<char[]> m_payload {};
 	
-
 public:
 	int m_sockfd {};
 	// constructor for the socket

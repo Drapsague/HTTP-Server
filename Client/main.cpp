@@ -1,4 +1,3 @@
-
 #include "client.h"
 #include <thread>
 
@@ -16,8 +15,6 @@ int main() {
 	// To then do other actions
 	resp.join();
 	rec.join();
-
-
 
 	return 0;
 }
