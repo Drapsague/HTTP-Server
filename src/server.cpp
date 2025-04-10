@@ -10,6 +10,7 @@
 #include <sys/event.h>
 #include <unistd.h>
 #include <cstring>
+#include <utility>
 
 /* Create a socket
  * Bind the socket to an IP and Port
@@ -107,6 +108,7 @@ void Server::connection() {
 		for (int i = 0; new_events > i; i++) {
 			// We can retreive sockets that were triggered
 			int event_fd = event[i].ident;
+			std::shared_ptr<char[]> last_message {};
 
 			// When the client disconnects an EOF is sent. By closing the file
 			// descriptor the event is automatically removed from the kqueue.
@@ -156,18 +158,22 @@ void Server::connection() {
 				auto it = m_con_list.find(event_fd);
 				if (it != m_con_list.end())
 				{
-					std::cout << "Before " << it->second.use_count() << '\n';
+					// std::cout << "Before " << it->second.use_count() << '\n';
 					req.handleClient(it->second);
-					std::cout << "After " << it->second.use_count() << '\n';
+					std::unique_ptr<char[]> message = req.get_last_message(it->second);
+					last_message = std::move(message);
+					// std::cout << "After " << it->second.use_count() << '\n';
 				}
 				for (auto &pair : m_con_list) {
 					// Here the server send the updated database to each client
 					// Except the one who just sent a message (because he already have the last database)
 					if (pair.first !=  event_fd) 
 					{
-						req.sendDatabase(pair.second);
+						req.sendDatabase(pair.second, last_message);
 					}
 				}
+				size_t last_message_size {strlen(last_message.get())};
+				std::memset(last_message.get(), 0, last_message_size);
 			}
 
 			// Just to see the map, and active connections

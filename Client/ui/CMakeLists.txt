@@ -11,7 +11,10 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(ftxui)       
 
-add_executable(main src/main.cpp)
+add_executable(main 
+  src/main.cpp
+  src/client.cpp
+)
 
 target_link_libraries(main PRIVATE ftxui::screen ftxui::dom ftxui::component)
 

@@ -73,7 +73,42 @@ std::unique_ptr<char[]> Response::get_header_file() {
 std::unique_ptr<char[]> Response::get_content() {
 	if (m_clientSocket < 0) { return nullptr;}
 
-	// Getting the message sent, all messages have the prefix '#' for easier parsing
+	// Getting the message sent, all messages are serialized for easier parsing
+	// strchr returns a pointer to the fisrt occurence of the char
+	char* buffer {m_recvBuffer.get()};
+	char* message_serialized {strstr(buffer, "{message : ")};
+	char* message = message_serialized + 11;
+	if (!message) 
+	{
+		std::cerr << "[ERROR] '{' not found in buffer: " << buffer << std::endl;
+		return nullptr;
+	}
+
+	size_t raw_size = strlen(message);
+	if (raw_size < 2) 
+	{
+		std::cerr << "[ERROR] Message too short after '{': " << message + 1 << std::endl;
+		return nullptr;
+	}
+	// When we get the message we have '<message>}\r\n'
+	// We have to remove the two last char for json parsing reason
+	size_t message_size = raw_size - 3;
+	// Creating a string with the exact size of the first line
+	// And copying the first line in that string
+	// Assigning the header to our class argument
+	std::unique_ptr<char[]> message_content {new char [message_size + 1]};
+
+	memcpy(message_content.get(), message, message_size);
+
+	message_content.get()[message_size] = '\0';
+
+	return message_content;
+}
+
+std::unique_ptr<char[]> Response::get_serialized_content() {
+	if (m_clientSocket < 0) { return nullptr;}
+
+	// Getting the message sent, all messages are serialized for easier parsing
 	// strchr returns a pointer to the fisrt occurence of the char
 	char* buffer {m_recvBuffer.get()};
 	char* message {strchr(buffer, '{')};
@@ -82,21 +117,22 @@ std::unique_ptr<char[]> Response::get_content() {
 		std::cerr << "[ERROR] '{' not found in buffer: " << buffer << std::endl;
 		return nullptr;
 	}
-	// When we get the message we have '<message>\r\n'
-	// We have to remove the two last char for json parsing reason
-	size_t raw_size = strlen(message + 1);
+
+	size_t raw_size = strlen(message);
 	if (raw_size < 2) 
 	{
 		std::cerr << "[ERROR] Message too short after '{': " << message + 1 << std::endl;
 		return nullptr;
 	}
+	// When we get the message we have '<message>\r\n'
+	// We have to remove the two last char for json parsing reason
 	size_t message_size = raw_size - 2;
 	// Creating a string with the exact size of the first line
 	// And copying the first line in that string
 	// Assigning the header to our class argument
 	std::unique_ptr<char[]> message_content {new char [message_size + 1]};
 
-	memcpy(message_content.get(), message + 1, message_size);
+	memcpy(message_content.get(), message, message_size);
 
 	message_content.get()[message_size] = '\0';
 
@@ -231,39 +267,41 @@ void Response::create_response() {
 
 
 void Response::send_response() {
-	if (m_clientSocket <  0) { return;}
-	// Here we need to send in a loop, send() could send the response partially
-	// We make sure that every bytes is sent
-	size_t rest_bytes = m_response;
-	// Be careful to not delete or nullptr current, .get() only gives a temporary access
-	// Current can be used if buffer_se is not reset or nullptr
-	char* current = m_resBuffer.get();
+	// if (m_clientSocket <  0) { return;}
+	// // Here we need to send in a loop, send() could send the response partially
+	// // We make sure that every bytes is sent
+	// size_t rest_bytes = m_response;
+	// // Be careful to not delete or nullptr current, .get() only gives a temporary access
+	// // Current can be used if buffer_se is not reset or nullptr
+	// char* current = m_resBuffer.get();
+	//
+	// // We calculate X by taking the min value between rest bytes to send and the buffer size
+	// std::cout << "1 - Sending -- \n" << m_resBuffer.get() << '\n';
+	// size_t X = std::min(rest_bytes, m_resBuffer_size);
+	// ssize_t sendResponse = send(m_clientSocket, current, X, 0);
+	// rest_bytes -= sendResponse;
+	// current += sendResponse;
+	// if (sendResponse == -1) {
+	// 	current = nullptr;
+	// 	std::cerr << "Failed to send a response to the client." << '\n';
+	// 	return;
+	// }
+	// current = nullptr;
+	//
+	//
+	
 
-	// We calculate X by taking the min value between rest bytes to send and the buffer size
-	std::cout << "1 - Sending -- \n" << m_resBuffer.get() << '\n';
-	size_t X = std::min(rest_bytes, m_resBuffer_size);
-	ssize_t sendResponse = send(m_clientSocket, current, X, 0);
-	rest_bytes -= sendResponse;
-	current += sendResponse;
-	if (sendResponse == -1) {
-		current = nullptr;
-		std::cerr << "Failed to send a response to the client." << '\n';
-		return;
-	}
-	current = nullptr;
-}
 
-
-void Response::send_database() {
 	if (m_clientSocket <  0) { return;}
 	 std::cout << "Sending database to -- " << m_clientSocket << '\n';
 
-	std::unique_ptr<char[]> file = get_file("public/database.json");
+
+	std::unique_ptr<char[]> serialized_message = get_serialized_content();
+	size_t send_buffer_size {4096};
+	
 
 	// Adding 2 because we add \r\n after the payload
-	size_t payload_size {strlen(file.get()) + 2};
-
-	size_t send_buffer_size {4096};
+	size_t payload_size {strlen(serialized_message.get()) + 2};
 
 	std::unique_ptr<char[]> send_buffer {new char[send_buffer_size]};
 	std::memset(send_buffer.get(), 0, send_buffer_size);
@@ -276,7 +314,63 @@ void Response::send_database() {
 			 "\r\n"
 			 "%s\r\n",
 			 static_cast<int>(payload_size),
-			 file.get());
+			 serialized_message.get());
+	
+	if (response >= static_cast<int>(send_buffer_size)) {
+		std::cerr << "Response was truncated" << '\n';
+		return;
+	}
+	else if (response < 0) {
+		std::cerr << "Error formating response" << '\n';
+		return;
+	}
+
+	// Here we need to send in a loop, send() could send the response partially
+	// We make sure that every bytes is sent
+	size_t rest_bytes = response;
+	// Be careful to not delete or nullptr current, .get() only gives a temporary access
+	// Current can be used if buffer_se is not reset or nullptr
+	char* current = send_buffer.get();
+
+	// We calculate X by taking the min value between rest bytes to send and the buffer size
+	size_t X = std::min(rest_bytes, send_buffer_size);
+	ssize_t sendResponse = send(m_clientSocket, current, X, 0);
+	rest_bytes -= sendResponse;
+	current += sendResponse;
+	if (sendResponse == -1) {
+		current = nullptr;
+		std::cerr << "Failed to send a response to the client." << '\n';
+		return;
+	}
+	current = nullptr;
+	std::cout << "2 - Sending -- \n" << send_buffer.get() << '\n';
+}
+
+
+void Response::send_database(std::shared_ptr<char[]> serialized_message) {
+	if (m_clientSocket <  0) { return;}
+	 std::cout << "Sending database to -- " << m_clientSocket << '\n';
+
+	// std::unique_ptr<char[]> file = get_file("public/database.json");
+
+	size_t send_buffer_size {4096};
+	
+
+	// Adding 2 because we add \r\n after the payload
+	size_t payload_size {strlen(serialized_message.get()) + 2};
+
+	std::unique_ptr<char[]> send_buffer {new char[send_buffer_size]};
+	std::memset(send_buffer.get(), 0, send_buffer_size);
+
+	// Content-Length needs to match the size of the payload
+	int response = snprintf(send_buffer.get(), send_buffer_size, 
+			 "HTTP/1.1 200 OK\r\n"
+			 "Content-Type: application/json\r\n"
+			 "Content-Length: %d\r\n"
+			 "\r\n"
+			 "%s\r\n",
+			 static_cast<int>(payload_size),
+			 serialized_message.get());
 	
 	if (response >= static_cast<int>(send_buffer_size)) {
 		std::cerr << "Response was truncated" << '\n';
