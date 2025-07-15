@@ -2,9 +2,13 @@
 *.o
 .clangd
 
-# Makefile
-Makefile
-
 # Executable files
 HTTP_server
+security_analyzer
+security_analyzer_test
+
+# Build directories
+obj/
+bin/security_analyzer
+bin/security_analyzer_test
 
