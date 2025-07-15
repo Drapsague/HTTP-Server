@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <cstring>
 #include <memory>
+#include <cstdlib>
 
 
 Response::Response(RequestsHandler* con ,size_t recvBuffer_size)
@@ -28,8 +29,9 @@ void Response::recv_request() {
 	std::memset(m_recvBuffer.get(), 0, m_recvBuffer_size);
 	std::memset(m_resBuffer.get(), 0, m_resBuffer_size);
 
-	ssize_t rec = recv(connection_->m_clientSocket, m_recvBuffer.get(), m_recvBuffer_size, 0);
+	ssize_t rec = recv(connection_->m_clientSocket, m_recvBuffer.get(), m_recvBuffer_size - 1, 0);
 	if (rec > 0) {
+		// FIX: Ensure null termination within buffer bounds
 		m_recvBuffer.get()[rec] = '\0';
 	}
 	if (rec <= 0) {
@@ -39,8 +41,8 @@ void Response::recv_request() {
 		return;
 	}
 	std::cout << '\n';
-	std::cout << "Mesage received -- size : " << rec << '\n';
-	std::cout << m_recvBuffer.get() << '\n';
+	std::cout << "Message received -- size : " << rec << '\n';
+	// Security: Don't log request content to prevent information disclosure
 }
 
 std::unique_ptr<char[]> Response::get_header_file() {
@@ -50,21 +52,33 @@ std::unique_ptr<char[]> Response::get_header_file() {
 	// We get the size of that string and substract it to the size of the whole request
 	char* without_get {m_recvBuffer.get() + 4}; // Getting the string without "GET" -> 4, but if "POST" -> 5
 	char* f_line {strchr(without_get, ' ')};
+	if (!f_line) { return nullptr; }
 	size_t file_s  {strlen(without_get) - strlen(f_line)};
+
+	// Security: Validate path to prevent directory traversal attacks
+	// Check for path traversal patterns
+	for (size_t i = 0; i < file_s - 1; i++) {
+		if (without_get[i] == '.' && without_get[i + 1] == '.') {
+			std::cerr << "Path traversal attempt blocked" << '\n';
+			return nullptr;
+		}
+	}
 
 	// Creating a string with the exact size of the first line
 	// And copying the first line in that string
 	// Assigning the header to our class argument
-	std::unique_ptr<char[]> header {new char(file_s + 8)};
+	// FIX: Correct array allocation syntax
+	std::unique_ptr<char[]> header {new char[file_s + 8]};
 
 	// All the html files are in /public
 	memcpy(header.get(), "/public", 7);
 	// We copy the /<file>.html in the header
 	memcpy(header.get() + 7, without_get, file_s);
 
-	header.get()[file_s + 8] = '\0';
+	// FIX: Correct null termination index
+	header.get()[file_s + 7] = '\0';
 
-	std::cout << header.get() << '\n';
+	// Security: Don't log paths to prevent information disclosure
 	return header;
 }
 
@@ -77,8 +91,30 @@ std::unique_ptr<char[]> Response::get_file(char* header_ptr) {
 		is_valid_header = false;
 		return file_ptr;
 	}
+	
+	// Security: Validate that path doesn't escape public directory
+	char* resolved_path = realpath(header_ptr + 1, nullptr);
+	if (!resolved_path) {
+		std::cerr << "Invalid file path" << '\n';
+		is_valid_header = false;
+		return file_ptr;
+	}
+	
+	// Check if resolved path starts with public directory
+	char* public_path = realpath("public", nullptr);
+	if (!public_path || strncmp(resolved_path, public_path, strlen(public_path)) != 0) {
+		std::cerr << "Access denied - path outside public directory" << '\n';
+		free(resolved_path);
+		free(public_path);
+		is_valid_header = false;
+		return file_ptr;
+	}
+	
 	// We need this to read the file (kind like a socket)
-	std::ifstream file(header_ptr + 1, std::ios::binary);
+	std::ifstream file(resolved_path, std::ios::binary);
+	free(resolved_path);
+	free(public_path);
+	
 	if (!file) {
 		std::cerr << "Error while getting the file" << '\n';
 		is_valid_header = false;
@@ -97,7 +133,7 @@ std::unique_ptr<char[]> Response::get_file(char* header_ptr) {
 	file.read(file_ptr.get(), file_size);
 	file.close();
 
-	std::cout << file_ptr.get() << '\n';
+	// Security: Don't print file contents to stdout (information disclosure)
 	is_valid_header = true;
 
 	return file_ptr;
@@ -138,25 +174,35 @@ void Response::create_response() {
 	// Adding 2 because we add \r\n after the payload
 	size_t payload_size {strlen(file.get()) + 2};
 
-	// Content-Length needs to match the size of the payload
-	int response = snprintf(m_resBuffer.get(), m_recvBuffer_size, 
+	// Security: Use safer string construction to avoid format string attacks
+	// First construct the HTTP headers
+	int header_len = snprintf(m_resBuffer.get(), m_resBuffer_size, 
 			 "HTTP/1.1 200 OK\r\n"
 			 "Content-Type: text/html\r\n"
 			 "Content-Length: %d\r\n"
-			 "\r\n"
-			 "%s\r\n",
-			 static_cast<int>(payload_size),
-			 file.get());
+			 "\r\n",
+			 static_cast<int>(payload_size));
 	
-	if (response >= static_cast<int>(m_resBuffer_size)) {
-		std::cerr << "Response was truncated" << '\n';
+	if (header_len >= static_cast<int>(m_resBuffer_size) || header_len < 0) {
+		std::cerr << "Error creating response headers" << '\n';
 		return;
 	}
-	else if (response < 0) {
-		std::cerr << "Error formating response" << '\n';
+	
+	// Then safely append file content and CRLF
+	size_t remaining_space = m_resBuffer_size - header_len;
+	size_t file_len = strlen(file.get());
+	
+	if (file_len + 3 > remaining_space) { // +3 for \r\n\0
+		std::cerr << "Response buffer too small for file content" << '\n';
 		return;
 	}
-	m_response = response;
+	
+	// Safely copy file content
+	memcpy(m_resBuffer.get() + header_len, file.get(), file_len);
+	memcpy(m_resBuffer.get() + header_len + file_len, "\r\n", 2);
+	m_resBuffer.get()[header_len + file_len + 2] = '\0';
+	
+	m_response = header_len + file_len + 2;
 }
 
 
